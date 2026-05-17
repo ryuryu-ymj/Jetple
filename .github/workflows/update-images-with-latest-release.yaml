@@ -17,14 +17,14 @@ jobs:
 
       - name: Download latest release
         run: |
-          response=$(curl -s https://api.github.com/repos/negset/Firple/releases/latest)
+          response=$(curl -s https://api.github.com/repos/negset/Jetple/releases/latest)
           asset_urls=$(echo $response | jq -r '.assets[] | .browser_download_url')
           wget $asset_urls
 
       - name: Install fonts
         run: |
           unzip '*.zip'
-          sudo mv Firple*.ttf /usr/share/fonts/ && fc-cache -fv
+          sudo mv Jetple*.ttf /usr/share/fonts/ && fc-cache -fv
 
       - name: Set up svg-to-webp
         run: |

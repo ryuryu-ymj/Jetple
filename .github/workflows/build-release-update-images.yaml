@@ -25,7 +25,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: firple-ttfs
+          name: jetple-ttfs
           path: out/*.ttf
 
   release:
@@ -35,18 +35,18 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v5
         with:
-          name: firple-ttfs
+          name: jetple-ttfs
 
       - name: Package artifacts
-        run: zip Firple.zip Firple-*.ttf && zip FirpleSlim.zip FirpleSlim-*.ttf
+        run: zip Jetple.zip Jetple-*.ttf && zip JetpleSlim.zip JetpleSlim-*.ttf
 
       - name: Create GitHub release (draft)
         uses: softprops/action-gh-release@v2
         with:
           draft: true
           files: |
-            Firple.zip
-            FirpleSlim.zip
+            Jetple.zip
+            JetpleSlim.zip
 
   update-images:
     runs-on: ubuntu-latest
@@ -60,10 +60,10 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v5
         with:
-          name: firple-ttfs
+          name: jetple-ttfs
 
       - name: Install fonts
-        run: sudo mv Firple*.ttf /usr/share/fonts/ && fc-cache -fv
+        run: sudo mv Jetple*.ttf /usr/share/fonts/ && fc-cache -fv
 
       - name: Set up svg-to-webp
         run: |
