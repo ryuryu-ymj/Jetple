@@ -1,29 +1,35 @@
-FAMILY = "Firple"
+FAMILY = "Jetple"
 VERSION = "6.400"
-COPYRIGHT = "Copyright 2021 negset"
+COPYRIGHT = "Copyright 2021 negset\nCopyright 2026 ryuryu-ymj"
 
 SRC_DIR = "src"
 OUT_DIR = "out"
 TMP_DIR = "tmp"
 SRC_FILES = {
     "Regular": [
-        f"{SRC_DIR}/FiraCode-Regular.ttf",
-        f"{SRC_DIR}/IBMPlexSansJP-Regular.ttf",
+        f"{SRC_DIR}/JetBrainsMono-Regular.ttf",
+        f"{SRC_DIR}/IBMPlexSansJP-Text.ttf",
     ],
     "Bold": [
-        f"{SRC_DIR}/FiraCode-Bold.ttf",
+        f"{SRC_DIR}/JetBrainsMono-Bold.ttf",
         f"{SRC_DIR}/IBMPlexSansJP-Bold.ttf",
+    ],
+    "Italic": [
+        f"{SRC_DIR}/JetBrainsMono-Italic.ttf",
+    ],
+    "BoldItalic": [
+        f"{SRC_DIR}/JetBrainsMono-BoldItalic.ttf",
     ],
 }
 NERD_PATCHER = f"{SRC_DIR}/FontPatcher/font-patcher"
 
-PLEX_SCALE = 2.0
-ITALIC_SKEW = 12
+PLEX_SCALE = 1.0
+ITALIC_SKEW = 9
 ITALIC_OFFSET = -100
 SLIM_SCALE = 0.85
 
-ITALIC_GLYPH_NAMES = ["a", "b", "e", "f", "g", "k", "q"]
-OVERWRITE_GLYPH_NAMES = ["uni300C", "uni300D"]  # "「", "」"
+ITALIC_GLYPH_NAMES = []  # ["a", "b", "e", "f", "g", "k", "q"]
+OVERWRITE_GLYPH_NAMES = []  # ["uni300C", "uni300D"]  # "「", "」"
 FEATURE_GLYPH_NAMES = {
     "cv33": ["uni3000"],
     "ss11": [

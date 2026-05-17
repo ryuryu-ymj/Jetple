@@ -99,15 +99,20 @@ def generate(params: FontParams) -> None:
 
 
 def create_base_font(params: FontParams) -> str:
-    frcd_path = SRC_FILES[params.weight][0]
+    jbmn_path = SRC_FILES[params.weight][0]
+    if params.italic:
+        if not params.bold:
+            jbmn_path = SRC_FILES["Italic"][0]
+        else:
+            jbmn_path = SRC_FILES["BoldItalic"][0]
     plex_path = SRC_FILES[params.weight][1]
-    out_path = f'{TMP_DIR}/{params.psname.replace(FAMILY, "Tmp")}.ttf'
+    out_path = f"{TMP_DIR}/{params.psname.replace(FAMILY, 'Tmp')}.ttf"
 
     # check if src font files exist
-    required(params.fullname, [frcd_path, plex_path])
+    required(params.fullname, [jbmn_path, plex_path])
 
     with (
-        FontForgeFont(frcd_path) as frcd,
+        FontForgeFont(jbmn_path) as jbmn,
         FontForgeFont(plex_path) as plex,
     ):
         if params.italic:
@@ -120,21 +125,33 @@ def create_base_font(params: FontParams) -> str:
 
             print("Importing italic glyphs...")
             for name in ITALIC_GLYPH_NAMES:
-                glyph = frcd[name]
+                glyph = jbmn[name]
                 glyph.clear()
                 glyph.importOutlines(glyph_paths[name], scale=False)
-                glyph.width = frcd["A"].width
+                glyph.width = jbmn["A"].width
 
         if params.slim:
             print("Condensing glyphs...")
-            frcd.selection.all()
-            frcd.transform(psMat.scale(SLIM_SCALE, 1))
+            jbmn.selection.all()
+            jbmn.transform(psMat.scale(SLIM_SCALE, 1))
+
+        if params.italic:
+            print("Skewing glyphs...")
+            plex.selection.all()
+            plex.unlinkReferences()
+            offset = ITALIC_OFFSET * SLIM_SCALE if params.slim else ITALIC_OFFSET
+            plex.transform(
+                psMat.compose(
+                    psMat.translate(offset, 0),
+                    psMat.skew(math.radians(ITALIC_SKEW)),
+                ),
+            )
 
         print("Copying glyphs...")
-        copied_glyph_names = copy_glyphs(frcd, plex)
+        copied_glyph_names = copy_glyphs(jbmn, plex)
 
         print("Copying lookups...")
-        copy_lookups(frcd, plex)
+        copy_lookups(jbmn, plex)
 
         print("Creating features...")
         for tag, names in FEATURE_GLYPH_NAMES.items():
@@ -144,11 +161,11 @@ def create_base_font(params: FontParams) -> str:
             )
             required(params.fullname, glyph_paths)
             f = freeze_feature if tag in params.freeze_features else create_feature
-            copied_glyph_names += f(tag, names, frcd, plex, params)
+            copied_glyph_names += f(tag, names, jbmn, plex, params)
 
         print("Fixing scripts and languages of all features...")
-        for lookup in frcd.gsub_lookups + frcd.gpos_lookups:
-            _, _, old_feature_data_tuple = frcd.getLookupInfo(lookup)
+        for lookup in jbmn.gsub_lookups + jbmn.gpos_lookups:
+            _, _, old_feature_data_tuple = jbmn.getLookupInfo(lookup)
             if not old_feature_data_tuple:
                 # skip no-tag lookup (single substitution, ligature substitution)
                 continue
@@ -158,13 +175,13 @@ def create_base_font(params: FontParams) -> str:
             new_feature_data_tuple = tuple(
                 feature_data_from_tag(tag) for tag, _ in old_feature_data_tuple
             )
-            frcd.lookupSetFeatureList(lookup, new_feature_data_tuple)
+            jbmn.lookupSetFeatureList(lookup, new_feature_data_tuple)
 
         print("Transforming copied glyphs...")
-        half_width = frcd["A"].width
+        half_width = jbmn["A"].width
         full_width = half_width * 2
         for name in copied_glyph_names:
-            glyph = frcd[name]
+            glyph = jbmn[name]
             if glyph.width == 500:
                 new_width = half_width
             elif glyph.width == 1000:
@@ -179,27 +196,15 @@ def create_base_font(params: FontParams) -> str:
                 psMat.compose(
                     psMat.scale(PLEX_SCALE),
                     psMat.translate(offset, 0),
-                )
+                ),
             )
             glyph.width = new_width
 
-        if params.italic:
-            print("Skewing glyphs...")
-            frcd.selection.all()
-            frcd.unlinkReferences()
-            offset = ITALIC_OFFSET * SLIM_SCALE if params.slim else ITALIC_OFFSET
-            frcd.transform(
-                psMat.compose(
-                    psMat.translate(offset, 0),
-                    psMat.skew(math.radians(ITALIC_SKEW)),
-                )
-            )
-
         print("Generating temporary file...")
-        frcd.fullname = params.fullname.replace(FAMILY, "Tmp")
+        jbmn.fullname = params.fullname.replace(FAMILY, "Tmp")
         # supress "Lookup subtable contains unused glyph..."
         with ErrorSuppressor.suppress():
-            frcd.generate(out_path)
+            jbmn.generate(out_path)
 
         print("Generating hint control file...")
         control_file_path = f"{TMP_DIR}/{params.psname}-control.txt"
@@ -207,7 +212,7 @@ def create_base_font(params: FontParams) -> str:
             name
             for name in copied_glyph_names
             if fontforge.scriptFromUnicode(
-                fontforge.unicodeFromName(name.split(".")[0])
+                fontforge.unicodeFromName(name.split(".")[0]),
             )
             != "latn"
         )
@@ -218,16 +223,16 @@ def create_base_font(params: FontParams) -> str:
 
 
 def copy_glyphs(
-    frcd: fontforge.font,
+    jbmn: fontforge.font,
     plex: fontforge.font,
 ) -> list[str]:
     # remove Plex prefered glyphs in advance
     for name in OVERWRITE_GLYPH_NAMES:
-        frcd[name].unlinkThisGlyph()
-        frcd.removeGlyph(name)
+        jbmn[name].unlinkThisGlyph()
+        jbmn.removeGlyph(name)
     # copy glyphs
     plex.selection.none()
-    frcd.selection.none()
+    jbmn.selection.none()
     total_glyphs = len(list(plex))
     for glyph in plex.glyphs():
         print(f"\r| {glyph.originalgid + 1} / {total_glyphs}", end="")
@@ -235,32 +240,32 @@ def copy_glyphs(
             unicodes = {glyph.unicode}
             if glyph.altuni:
                 unicodes |= {u for u, _, _ in glyph.altuni}
-            if any(u in frcd for u in unicodes):
+            if any(u in jbmn for u in unicodes):
                 # skip if slot conflicts
                 continue
             plex.selection.select(("more", "unicode"), glyph.unicode)
-            frcd.selection.select(("more", "unicode"), glyph.unicode)
+            jbmn.selection.select(("more", "unicode"), glyph.unicode)
         else:
-            if glyph.glyphname in frcd:
+            if glyph.glyphname in jbmn:
                 # skip if name conflicts
                 continue
             plex.selection.select(("more", "encoding"), glyph.encoding)
-            frcd_glyph = frcd.createMappedChar(len(frcd))
+            frcd_glyph = jbmn.createMappedChar(len(jbmn))
             frcd_glyph.glyphname = glyph.glyphname
-            frcd.selection.select(("more", "encoding"), frcd_glyph.encoding)
+            jbmn.selection.select(("more", "encoding"), frcd_glyph.encoding)
     plex.copy()
-    frcd.paste()
+    jbmn.paste()
 
     # copy name and altuni
     for slot in plex.selection:
         if slot > sys.maxunicode:
             break
-        frcd[slot].glyphname = plex[slot].glyphname
+        jbmn[slot].glyphname = plex[slot].glyphname
         if plex[slot].altuni:
-            frcd[slot].altuni = plex[slot].altuni
+            jbmn[slot].altuni = plex[slot].altuni
 
     print("")
-    return [frcd[slot].glyphname for slot in frcd.selection]
+    return [jbmn[slot].glyphname for slot in jbmn.selection]
 
 
 def copy_lookups(
@@ -308,7 +313,8 @@ def copy_lookups(
                     pass  # already exists
                 key = glyph.unicode if glyph.unicode >= 0 else glyph.glyphname
                 frcd[key].addPosSub(
-                    subtable_name, data[0] if len(data) == 1 else tuple(data)
+                    subtable_name,
+                    data[0] if len(data) == 1 else tuple(data),
                 )
             # glyph is not copied
             else:
@@ -326,7 +332,9 @@ def copy_lookups(
                         if key in frcd:
                             try:
                                 frcd.addLookup(
-                                    lookup_name, *lookup_info, frcd.gsub_lookups[-1]
+                                    lookup_name,
+                                    *lookup_info,
+                                    frcd.gsub_lookups[-1],
                                 )
                                 frcd.addLookupSubtable(lookup_name, subtable_name)
                             except OSError:
@@ -368,7 +376,7 @@ def create_feature(
         )
         variant_glyph.width = glyph.width
         variant_glyph.transform(
-            psMat.translate(0, plex.ascent - frcd.ascent)
+            psMat.translate(0, plex.ascent - frcd.ascent),
         )  # fix y gap
         glyph.addPosSub(subtable_name, variant_name)
         variant_names.append(variant_name)
@@ -424,7 +432,7 @@ def apply_auto_hinting(path: str, params: FontParams) -> str:
     cp = subprocess.run(cmd, check=False)
     if cp.returncode != 0:
         sys.exit(
-            f'Error: ttfautohint did not finish successfully for "{params.fullname}"'
+            f'Error: ttfautohint did not finish successfully for "{params.fullname}"',
         )
     return out_path
 
@@ -453,14 +461,14 @@ def apply_nerd_patch(path: str, params: FontParams) -> str:
         assert proc.stdout is not None
         for line in proc.stdout:
             columns = shutil.get_terminal_size().columns
-            text = f'\r| {line.rstrip("\n")}'.ljust(columns)[:columns]
+            text = f"\r| {line.rstrip('\n')}".ljust(columns)[:columns]
             sys.stdout.write(text)
             sys.stdout.flush()
             last_line = line
         proc.wait()
         if proc.returncode != 0:
             sys.exit(
-                f'Error: patcher did not finish successfully for "{params.fullname}"'
+                f'Error: patcher did not finish successfully for "{params.fullname}"',
             )
         print()
     # last_line should be "    \===> 'out_path'"
@@ -484,7 +492,7 @@ def set_font_params(path: str, params: FontParams) -> str:
                     COPYRIGHT,
                     frcd["name"].names[0].toUnicode(),
                     plex["name"].names[0].toUnicode(),
-                ]
+                ],
             ),
             1: params.family,
             2: params.subfamily,
@@ -528,7 +536,9 @@ def set_font_params(path: str, params: FontParams) -> str:
         ]
         for r in ranges:
             setattr(
-                frpl["OS/2"], r, getattr(frcd["OS/2"], r) | getattr(plex["OS/2"], r)
+                frpl["OS/2"],
+                r,
+                getattr(frcd["OS/2"], r) | getattr(plex["OS/2"], r),
             )
 
         # fix xAvgCharWidth changed by FontForge
@@ -650,7 +660,7 @@ def main():
                     nerd=args.nerd,
                     freeze_features=args.freeze_features,
                     ext=args.ext,
-                )
+                ),
             )
     else:
         # generate a single font file as specified
@@ -662,7 +672,7 @@ def main():
                 nerd=args.nerd,
                 freeze_features=args.freeze_features,
                 ext=args.ext,
-            )
+            ),
         )
 
 

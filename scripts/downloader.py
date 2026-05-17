@@ -9,7 +9,8 @@ from zipfile import ZipFile
 
 from settings import NERD_PATCHER, SRC_FILES
 
-FRCD_URL = "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip"
+# FRCD_URL = "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip"
+JBMN_URL = "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip"
 PLEX_URL = "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-sans-jp%403.0.0/ibm-plex-sans-jp.zip"
 NERD_URL = (
     "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FontPatcher.zip"
@@ -21,19 +22,21 @@ def main():
     parser.add_argument(
         "-a", "--all", action="store_true", help="download all files (default)"
     )
-    parser.add_argument("--fira-code", action="store_true", help="download fira code")
+    parser.add_argument(
+        "--jb-mono", action="store_true", help="download jetbrains mono"
+    )
     parser.add_argument("--plex-sans", action="store_true", help="download plex sans")
     parser.add_argument(
         "--font-patcher", action="store_true", help="download nerd font patcher"
     )
     args = parser.parse_args()
 
-    if not (args.fira_code or args.plex_sans or args.font_patcher):
+    if not (args.jb_mono or args.plex_sans or args.font_patcher):
         args.all = True
 
-    if args.all or args.fira_code:
-        print("Fira Code...")
-        fira_code()
+    if args.all or args.jb_mono:
+        print("JetBrains Mono...")
+        jb_mono()
     if args.all or args.plex_sans:
         print("Plex Sans...")
         plex_sans()
@@ -42,17 +45,17 @@ def main():
         font_patcher()
 
 
-def fira_code():
+def jb_mono():
     with TemporaryDirectory() as tmpdir:
         # download
-        path = f"{tmpdir}/FiraCode.zip"
-        request.urlretrieve(FRCD_URL, path)
+        path = f"{tmpdir}/JetBransMono.zip"
+        request.urlretrieve(JBMN_URL, path)
         # extract
         with ZipFile(path) as zf:
-            for weight in ["Regular", "Bold"]:
+            for weight in ["Regular", "Bold", "Italic", "BoldItalic"]:
                 outpath = SRC_FILES[weight][0]
                 name = basename(outpath)
-                tmppath = zf.extract(f"ttf/{name}", tmpdir)
+                tmppath = zf.extract(f"fonts/ttf/{name}", tmpdir)
                 move(tmppath, outpath)
 
 
