@@ -17,7 +17,7 @@ jobs:
 
       - name: Download latest release
         run: |
-          response=$(curl -s https://api.github.com/repos/negset/Jetple/releases/latest)
+          response=$(curl -s https://api.github.com/repos/ryuryu-ymj/Jetple/releases/latest)
           asset_urls=$(echo $response | jq -r '.assets[] | .browser_download_url')
           wget $asset_urls
 
